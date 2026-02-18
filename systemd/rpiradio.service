@@ -1,0 +1,17 @@
+[Unit]
+Description=rpiRadio Internet Radio Player
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/rpiradio daemon
+Restart=on-failure
+RestartSec=5
+User=rpiradio
+SupplementaryGroups=input audio
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
