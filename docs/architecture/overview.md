@@ -32,7 +32,7 @@ The system is a single binary (`rpiradio`) that operates in two modes:
 | Audio playback | `MpvController` | `src/mpv_controller.h/cpp` | Forks an mpv child process, communicates via mpv's JSON IPC protocol over a Unix socket. Manages play/stop/pause/volume and receives metadata + pause property changes. |
 | Station management | `StationManager` | `src/station_manager.h/cpp` | Parses M3U playlists (supports `#EXTINF` station names). Tracks current station index, provides next/prev/select navigation. |
 | MQTT integration | `MqttPublisher` | `src/mqtt_publisher.h/cpp` | Publishes JSON state to MQTT topics using libmosquitto. Topics: `{prefix}/state`, `{prefix}/station`, `{prefix}/metadata`, `{prefix}/volume`. QoS 1, retained. |
-| Physical input | `InputHandler` | `src/input_handler.h/cpp` | Opens an evdev device (e.g., IR receiver), reads key-down events. Also provides `scan_key()` for interactive key binding setup. Grabs the device exclusively when in daemon mode. |
+| Physical input | `InputHandler` | `src/input_handler.h/cpp` | Opens an evdev device (e.g., IR receiver), reads key-down events. Resolves devices by name at startup (`resolve_by_name()`), lists all devices (`list_devices()`), and provides `scan_key()` for interactive key binding setup. Grabs the device exclusively when in daemon mode. |
 | Key binding | `KeybindManager` | `src/keybind_manager.h/cpp` | Maps evdev key names (e.g., `KEY_PLAY`) to action strings (e.g., `play_pause`). Bindings stored in config and persisted on change. |
 | IPC server | `IpcServer` | `src/ipc_server.h/cpp` | Listens on a Unix domain socket. Accepts one connection at a time, reads one JSON line, dispatches to handler, writes one JSON line response, closes. Non-blocking listen fd for epoll integration. |
 
@@ -103,7 +103,7 @@ All messages are published with QoS 1 and the retain flag set.
 |---|---|---|
 | **mpv** | Forked as child process, controlled via JSON IPC socket | Fatal: daemon exits if mpv fails to start |
 | **libmosquitto** | MQTT client library, linked at build time | Graceful: daemon continues without MQTT if connection fails |
-| **libevdev** | Used for `libevdev_event_code_get_name()` to resolve keycode names | Graceful: daemon continues without input if device not configured/available |
+| **libevdev** | Used for keycode name resolution, device enumeration by name (`resolve_by_name`), and device listing (`list_devices`) | Graceful: daemon continues without input if device not configured/available |
 | **nlohmann/json** | Header-only JSON library, used throughout | Build-time dependency |
 
 ## Actions

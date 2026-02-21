@@ -138,13 +138,19 @@ static int cmd_bind(const Config& cfg, int argc, char* argv[]) {
         }
         std::string action = argv[2];
 
-        if (cfg.evdev_device.empty()) {
-            std::cerr << "Error: no evdev_device configured\n";
+        if (cfg.evdev_name.empty()) {
+            std::cerr << "Error: no evdev_name configured\n";
+            return 1;
+        }
+
+        std::string dev_path = InputHandler::resolve_by_name(cfg.evdev_name);
+        if (dev_path.empty()) {
+            std::cerr << "Error: device '" << cfg.evdev_name << "' not found\n";
             return 1;
         }
 
         std::cout << "Press a key on the remote..." << std::flush;
-        std::string key = InputHandler::scan_key(cfg.evdev_device);
+        std::string key = InputHandler::scan_key(dev_path);
         if (key.empty()) {
             std::cerr << "\nFailed to scan key\n";
             return 1;

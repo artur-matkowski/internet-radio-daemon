@@ -224,10 +224,18 @@ int daemon_run(Config& cfg) {
 
     InputHandler input;
     bool have_input = false;
-    if (!cfg.evdev_device.empty()) {
-        have_input = input.open(cfg.evdev_device, true);
-        if (!have_input) {
-            LOG_WARN("evdev device not available — continuing without input");
+    if (!cfg.evdev_name.empty()) {
+        std::string dev_path = InputHandler::resolve_by_name(cfg.evdev_name);
+        if (dev_path.empty()) {
+            LOG_WARN("evdev device '%s' not found — continuing without input",
+                     cfg.evdev_name.c_str());
+        } else {
+            LOG_INFO("resolved evdev '%s' → %s", cfg.evdev_name.c_str(), dev_path.c_str());
+            have_input = input.open(dev_path, true);
+            if (!have_input) {
+                LOG_WARN("evdev device %s could not be opened — continuing without input",
+                         dev_path.c_str());
+            }
         }
     }
 

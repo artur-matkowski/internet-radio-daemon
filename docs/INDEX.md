@@ -22,6 +22,7 @@ make
 ./build/rpiradio list            # List stations
 ./build/rpiradio status          # Current state as JSON
 ./build/rpiradio reload          # Reload config + stations
+./build/rpiradio devices         # Select input device (interactive menu)
 ./build/rpiradio bind list       # Show key bindings
 ./build/rpiradio bind scan <action>      # Scan a key press and bind it
 ./build/rpiradio bind set <key> <action> # Set binding directly
@@ -52,7 +53,7 @@ make
 | `src/ipc_server.h/cpp` | Unix domain socket server — accepts one-shot JSON request/response connections |
 | `src/ipc_client.h/cpp` | Unix domain socket client — sends a JSON request and reads one response |
 | `src/mqtt_publisher.h/cpp` | Publishes state, station, metadata, and volume to MQTT topics |
-| `src/input_handler.h/cpp` | Reads evdev key events, provides key scanning for binding setup |
+| `src/input_handler.h/cpp` | Reads evdev key events, device discovery by name, key scanning for binding setup |
 | `src/keybind_manager.h/cpp` | Maps evdev key names to action strings, persisted via config |
 | `src/log.h/cpp` | Logging module: 5 levels, timestamp + file:line format, stderr output |
 
@@ -68,7 +69,7 @@ Default values in `config/default_config.json`. Created automatically on first r
 | `mqtt_host` | string | `localhost` | MQTT broker hostname |
 | `mqtt_port` | int | `1883` | MQTT broker port |
 | `topic_prefix` | string | `rpiradio` | MQTT topic prefix (e.g., `rpiradio/state`) |
-| `evdev_device` | string | `""` | Path to evdev input device (e.g., `/dev/input/event0`) |
+| `evdev_name` | string | `""` | Name of evdev input device (e.g., `gpio_ir_recv`). Resolved to `/dev/input/eventN` at startup by scanning devices. Use `rpiradio devices` to list available names. |
 | `bindings` | object | *(see default_config.json)* | Key name → action string map |
 | `log_level` | string | `INFO` | Log level: TRACE, DEBUG, INFO, WARN, ERROR |
 | `mpv_extra_args` | array | `[]` | Additional arguments passed to mpv |

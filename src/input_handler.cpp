@@ -58,6 +58,36 @@ void InputHandler::process_event(std::function<std::string(int keycode)> lookup)
     }
 }
 
+std::vector<InputDevice> InputHandler::list_devices() {
+    std::vector<InputDevice> result;
+    for (int i = 0; i < 256; ++i) {
+        std::string path = "/dev/input/event" + std::to_string(i);
+        int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (fd < 0) continue;
+
+        struct libevdev* dev = nullptr;
+        if (libevdev_new_from_fd(fd, &dev) == 0) {
+            const char* name = libevdev_get_name(dev);
+            result.push_back({path, name ? name : ""});
+            libevdev_free(dev);
+        }
+        ::close(fd);
+    }
+    return result;
+}
+
+std::string InputHandler::resolve_by_name(const std::string& name) {
+    LOG_DEBUG("resolving evdev device by name: '%s'", name.c_str());
+    for (auto& dev : list_devices()) {
+        if (dev.name == name) {
+            LOG_DEBUG("found match: %s → %s", name.c_str(), dev.path.c_str());
+            return dev.path;
+        }
+    }
+    LOG_WARN("no evdev device found with name '%s'", name.c_str());
+    return "";
+}
+
 std::string InputHandler::scan_key(const std::string& device_path) {
     int fd = ::open(device_path.c_str(), O_RDONLY);
     if (fd < 0) {

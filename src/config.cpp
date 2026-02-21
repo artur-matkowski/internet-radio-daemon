@@ -33,7 +33,7 @@ nlohmann::json config_to_json(const Config& cfg) {
     j["mqtt_host"] = cfg.mqtt_host;
     j["mqtt_port"] = cfg.mqtt_port;
     j["topic_prefix"] = cfg.topic_prefix;
-    j["evdev_device"] = cfg.evdev_device;
+    j["evdev_name"] = cfg.evdev_name;
     j["bindings"] = cfg.bindings;
     j["log_level"] = cfg.log_level;
     j["mpv_extra_args"] = cfg.mpv_extra_args;
@@ -48,7 +48,7 @@ Config config_from_json(const nlohmann::json& j) {
     if (j.contains("mqtt_host"))      cfg.mqtt_host       = j["mqtt_host"].get<std::string>();
     if (j.contains("mqtt_port"))      cfg.mqtt_port       = j["mqtt_port"].get<int>();
     if (j.contains("topic_prefix"))   cfg.topic_prefix    = j["topic_prefix"].get<std::string>();
-    if (j.contains("evdev_device"))   cfg.evdev_device    = j["evdev_device"].get<std::string>();
+    if (j.contains("evdev_name"))     cfg.evdev_name      = j["evdev_name"].get<std::string>();
     if (j.contains("bindings"))       cfg.bindings        = j["bindings"].get<std::map<std::string, std::string>>();
     if (j.contains("log_level"))      cfg.log_level       = j["log_level"].get<std::string>();
     if (j.contains("mpv_extra_args")) cfg.mpv_extra_args  = j["mpv_extra_args"].get<std::vector<std::string>>();

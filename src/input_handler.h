@@ -1,7 +1,14 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <utility>
 #include <functional>
+
+struct InputDevice {
+    std::string path;
+    std::string name;
+};
 
 class InputHandler {
 public:
@@ -15,6 +22,8 @@ public:
 
     static std::string scan_key(const std::string& device_path);
     static std::string keycode_name(int code);
+    static std::string resolve_by_name(const std::string& name);
+    static std::vector<InputDevice> list_devices();
 
 private:
     int fd_ = -1;

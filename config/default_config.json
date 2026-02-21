@@ -3,7 +3,7 @@
   "mqtt_host": "localhost",
   "mqtt_port": 1883,
   "topic_prefix": "rpiradio",
-  "evdev_device": "",
+  "evdev_name": "",
   "bindings": {
     "KEY_PLAY": "play_pause",
     "KEY_STOP": "stop",
