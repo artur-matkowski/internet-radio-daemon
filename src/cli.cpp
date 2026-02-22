@@ -43,6 +43,11 @@ static int cmd_stop(const std::string& sock) {
     return 0;
 }
 
+static int cmd_toggle(const std::string& sock) {
+    print_json(ipc(sock, {{"command", "toggle"}}));
+    return 0;
+}
+
 static int cmd_next(const std::string& sock) {
     print_json(ipc(sock, {{"command", "next"}}));
     return 0;
@@ -95,6 +100,7 @@ int cli_dispatch(const std::string& socket_path, int argc, char* argv[]) {
 
     if (cmd == "play")    return cmd_play(socket_path, argc, argv);
     if (cmd == "stop")    return cmd_stop(socket_path);
+    if (cmd == "toggle")  return cmd_toggle(socket_path);
     if (cmd == "next")    return cmd_next(socket_path);
     if (cmd == "prev")    return cmd_prev(socket_path);
     if (cmd == "volume")  return cmd_volume(socket_path, argc, argv);

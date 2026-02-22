@@ -68,6 +68,24 @@ static json handle_ipc(const json& req, Config& cfg,
         return {{"status", "ok"}};
     }
 
+    if (cmd == "toggle") {
+        if (!mpv.is_playing() && !mpv.is_paused()) {
+            // Nothing loaded — start playing
+            if (!sm.current() && sm.count() > 0) {
+                sm.select(0);
+            }
+            if (sm.current()) {
+                do_play_station(mpv, sm, mqtt);
+            } else {
+                return {{"status", "error"}, {"message", "no stations available"}};
+            }
+        } else {
+            mpv.toggle_pause();
+            publish_full_state(mqtt, mpv, sm);
+        }
+        return {{"status", "ok"}};
+    }
+
     if (cmd == "next") {
         sm.next();
         do_play_station(mpv, sm, mqtt);
