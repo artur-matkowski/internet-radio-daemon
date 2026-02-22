@@ -2,6 +2,8 @@
 #include "log.h"
 #include <fstream>
 #include <algorithm>
+#include <cerrno>
+#include <cstring>
 
 static std::string trim(const std::string& s) {
     auto start = s.find_first_not_of(" \t\r\n");
@@ -20,7 +22,12 @@ static std::string name_from_url(const std::string& url) {
 bool StationManager::load(const std::string& path) {
     std::ifstream f(path);
     if (!f) {
-        LOG_ERROR("cannot open m3u file: %s", path.c_str());
+        if (errno == EACCES)
+            LOG_ERROR("permission denied opening m3u file: %s (check user/group)", path.c_str());
+        else if (errno == ENOENT)
+            LOG_ERROR("m3u file not found: %s", path.c_str());
+        else
+            LOG_ERROR("cannot open m3u file: %s (%s)", path.c_str(), strerror(errno));
         return false;
     }
 

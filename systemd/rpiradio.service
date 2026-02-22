@@ -1,6 +1,6 @@
 [Unit]
 Description=rpiRadio Internet Radio Player
-After=network-online.target mosquitto.service
+After=network-online.target mosquitto.service local-fs.target
 Wants=network-online.target
 
 [Service]

@@ -34,13 +34,25 @@ bool MpvController::start(const std::string& socket_path,
     socket_path_ = socket_path;
     unlink(socket_path.c_str());
 
+    int err_pipe[2];
+    if (pipe(err_pipe) < 0) {
+        LOG_ERROR("pipe failed: %s", strerror(errno));
+        return false;
+    }
+
     pid_t pid = fork();
     if (pid < 0) {
         LOG_ERROR("fork failed: %s", strerror(errno));
+        close(err_pipe[0]);
+        close(err_pipe[1]);
         return false;
     }
 
     if (pid == 0) {
+        close(err_pipe[0]);
+        dup2(err_pipe[1], STDERR_FILENO);
+        close(err_pipe[1]);
+
         // Reset signal mask so mpv can receive SIGTERM/SIGINT normally.
         // The parent daemon may have blocked signals before this fork,
         // or may do so in a future refactor — always clear in the child.
@@ -49,7 +61,7 @@ bool MpvController::start(const std::string& socket_path,
         sigprocmask(SIG_SETMASK, &empty, nullptr);
 
         std::vector<std::string> args = {
-            "mpv", "--idle", "--no-video", "--really-quiet",
+            "mpv", "--idle", "--no-video", "--no-terminal",
             "--input-ipc-server=" + socket_path
         };
         for (auto& a : extra_args) args.push_back(a);
@@ -62,6 +74,10 @@ bool MpvController::start(const std::string& socket_path,
         _exit(127);
     }
 
+    close(err_pipe[1]);
+    err_fd_ = err_pipe[0];
+    fcntl(err_fd_, F_SETFL, fcntl(err_fd_, F_GETFL, 0) | O_NONBLOCK);
+
     mpv_pid_ = pid;
     LOG_INFO("started mpv pid=%d socket=%s", pid, socket_path.c_str());
 
@@ -72,6 +88,22 @@ bool MpvController::start(const std::string& socket_path,
         int status;
         pid_t ret = waitpid(mpv_pid_, &status, WNOHANG);
         if (ret > 0) {
+            // drain mpv stderr
+            {
+                char buf[2048];
+                std::string output;
+                ssize_t n;
+                while ((n = read(err_fd_, buf, sizeof(buf) - 1)) > 0) {
+                    buf[n] = '\0';
+                    output.append(buf, n);
+                }
+                close(err_fd_);
+                err_fd_ = -1;
+                while (!output.empty() && output.back() == '\n') output.pop_back();
+                if (!output.empty()) {
+                    LOG_ERROR("mpv stderr: %s", output.c_str());
+                }
+            }
             if (WIFEXITED(status) && WEXITSTATUS(status) == 127) {
                 LOG_ERROR("mpv not found — is it installed? (apt install mpv)");
             } else {
@@ -82,6 +114,7 @@ bool MpvController::start(const std::string& socket_path,
         }
 
         if (connect_socket(socket_path)) {
+            if (err_fd_ >= 0) { close(err_fd_); err_fd_ = -1; }
             LOG_INFO("connected to mpv IPC socket");
 
             int flags = fcntl(sock_fd_, F_GETFL, 0);
@@ -95,6 +128,22 @@ bool MpvController::start(const std::string& socket_path,
         }
     }
 
+    // drain mpv stderr
+    {
+        char buf[2048];
+        std::string output;
+        ssize_t n;
+        while ((n = read(err_fd_, buf, sizeof(buf) - 1)) > 0) {
+            buf[n] = '\0';
+            output.append(buf, n);
+        }
+        close(err_fd_);
+        err_fd_ = -1;
+        while (!output.empty() && output.back() == '\n') output.pop_back();
+        if (!output.empty()) {
+            LOG_ERROR("mpv stderr: %s", output.c_str());
+        }
+    }
     LOG_ERROR("timeout connecting to mpv IPC socket");
     // Clean up the orphaned mpv child process
     if (mpv_pid_ > 0) {
@@ -107,6 +156,7 @@ bool MpvController::start(const std::string& socket_path,
 }
 
 void MpvController::shutdown() {
+    if (err_fd_ >= 0) { close(err_fd_); err_fd_ = -1; }
     if (sock_fd_ >= 0) {
         send_command({{"command", {"quit"}}});
         close(sock_fd_);

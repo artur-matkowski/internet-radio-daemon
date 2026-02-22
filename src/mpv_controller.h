@@ -36,6 +36,7 @@ private:
 
     std::string socket_path_;
     int sock_fd_ = -1;
+    int err_fd_ = -1;
     pid_t mpv_pid_ = -1;
     bool playing_ = false;
     bool paused_ = false;

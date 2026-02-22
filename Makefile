@@ -40,6 +40,7 @@ install: $(TARGET)
 	install -D -m 644 config/default_config.json $(DESTDIR)$(CONFDIR)/config.json
 	install -D -m 644 systemd/rpiradio.service $(DESTDIR)$(UNITDIR)/rpiradio.service
 	id -u rpiradio >/dev/null 2>&1 || useradd -r -s /usr/sbin/nologin rpiradio
+	usermod -aG audio rpiradio
 	systemctl daemon-reload
 	systemctl enable rpiradio.service
 
