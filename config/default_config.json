@@ -5,7 +5,8 @@
   "topic_prefix": "rpiradio",
   "log_level": "INFO",
   "mpv_extra_args": [
-    "--ao=alsa"
+    "--ao=alsa",
+    "--audio-device=alsa/hdmi:vc4hdmi1,0"
   ],
   "ipc_socket_path": "/run/rpiradio/rpiradio.sock",
   "mpv_socket_path": "/run/rpiradio/mpv.sock"
