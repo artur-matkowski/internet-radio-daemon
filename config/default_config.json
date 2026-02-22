@@ -5,6 +5,6 @@
   "topic_prefix": "rpiradio",
   "log_level": "INFO",
   "mpv_extra_args": [],
-  "ipc_socket_path": "/tmp/rpiradio.sock",
-  "mpv_socket_path": "/tmp/rpiradio-mpv.sock"
+  "ipc_socket_path": "/run/rpiradio/rpiradio.sock",
+  "mpv_socket_path": "/run/rpiradio/mpv.sock"
 }

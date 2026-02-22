@@ -41,6 +41,13 @@ bool MpvController::start(const std::string& socket_path,
     }
 
     if (pid == 0) {
+        // Reset signal mask so mpv can receive SIGTERM/SIGINT normally.
+        // The parent daemon may have blocked signals before this fork,
+        // or may do so in a future refactor — always clear in the child.
+        sigset_t empty;
+        sigemptyset(&empty);
+        sigprocmask(SIG_SETMASK, &empty, nullptr);
+
         std::vector<std::string> args = {
             "mpv", "--idle", "--no-video", "--really-quiet",
             "--input-ipc-server=" + socket_path
@@ -89,6 +96,13 @@ bool MpvController::start(const std::string& socket_path,
     }
 
     LOG_ERROR("timeout connecting to mpv IPC socket");
+    // Clean up the orphaned mpv child process
+    if (mpv_pid_ > 0) {
+        kill(mpv_pid_, SIGTERM);
+        int status;
+        waitpid(mpv_pid_, &status, 0);
+        mpv_pid_ = -1;
+    }
     return false;
 }
 
@@ -185,6 +199,10 @@ bool MpvController::toggle_pause() {
     int rid = next_req_id_++;
     auto resp = send_command_sync(
         {{"command", {"cycle", "pause"}}}, rid);
+    if (resp.is_null()) {
+        LOG_WARN("toggle_pause: no response from mpv");
+        return false;
+    }
     paused_ = !paused_;
     LOG_INFO("pause toggled → %s", paused_ ? "paused" : "playing");
     return true;

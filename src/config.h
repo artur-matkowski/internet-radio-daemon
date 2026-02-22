@@ -4,7 +4,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-inline constexpr const char* DEFAULT_IPC_SOCKET_PATH = "/tmp/rpiradio.sock";
+inline constexpr const char* DEFAULT_IPC_SOCKET_PATH = "/run/rpiradio/rpiradio.sock";
 
 struct Config {
     std::string m3u_path = "/etc/rpiradio/stations.m3u";
@@ -14,7 +14,7 @@ struct Config {
     std::string log_level = "INFO";
     std::vector<std::string> mpv_extra_args;
     std::string ipc_socket_path = DEFAULT_IPC_SOCKET_PATH;
-    std::string mpv_socket_path = "/tmp/rpiradio-mpv.sock";
+    std::string mpv_socket_path = "/run/rpiradio/mpv.sock";
 };
 
 Config config_load();
