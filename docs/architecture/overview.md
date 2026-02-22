@@ -20,8 +20,8 @@ The system is a single binary (`rpiradio`) that operates in two modes:
 └─────────────────────────────────────────────┘
 ```
 
-- **Daemon mode** (`rpiradio daemon`): Long-running process with an epoll event loop. Owns all subsystems.
-- **CLI mode** (`rpiradio <command>`): One-shot process that sends a JSON request to the daemon via IPC and prints the response.
+- **Daemon mode** (`rpiradio daemon`): Long-running process with an epoll event loop. Owns all subsystems. Loads config from `/etc/rpiradio/config.json`.
+- **CLI mode** (`rpiradio <command>`): One-shot process that sends a JSON request to the daemon via IPC and prints the response. Does not load config — uses the well-known IPC socket path directly.
 
 ## Component Map
 
@@ -41,13 +41,13 @@ The system is a single binary (`rpiradio`) that operates in two modes:
 | Component | Class | File | Role |
 |---|---|---|---|
 | IPC client | `IpcClient` | `src/ipc_client.h/cpp` | Connects to daemon socket, sends JSON request, reads JSON response. 5-second receive timeout. |
-| Command dispatch | `cli_dispatch()` | `src/cli.h/cpp` | Parses CLI subcommands, builds JSON requests, calls IPC client, formats output. |
+| Command dispatch | `cli_dispatch()` | `src/cli.h/cpp` | Parses CLI subcommands, builds JSON requests, calls IPC client, formats output. Receives the IPC socket path directly — does not depend on config. |
 
 ### Shared Components
 
 | Component | File | Role |
 |---|---|---|
-| Configuration | `src/config.h/cpp` | Loads/saves JSON config. Path: `$XDG_CONFIG_HOME/rpiradio/config.json`. Uses nlohmann/json. |
+| Configuration | `src/config.h/cpp` | Loads JSON config from `/etc/rpiradio/config.json`. Used only by the daemon. If the file is missing, compiled-in defaults are used. The daemon never writes to the config file. |
 | Logging | `src/log.h/cpp` | 5-level logging to stderr. See [logging standard](../standards/logging.md). |
 
 ## Daemon Event Loop

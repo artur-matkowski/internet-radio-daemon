@@ -25,14 +25,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    Config cfg = config_load();
-    log_init(cfg.log_level);
-
     const char* cmd = argv[1];
 
     if (std::strcmp(cmd, "daemon") == 0) {
+        Config cfg = config_load();
+        log_init(cfg.log_level);
         return daemon_run(cfg);
     }
 
-    return cli_dispatch(cfg, argc - 1, argv + 1);
+    return cli_dispatch(DEFAULT_IPC_SOCKET_PATH, argc - 1, argv + 1);
 }

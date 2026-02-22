@@ -44,10 +44,10 @@ make
 
 | File | Responsibility |
 |---|---|
-| `src/main.cpp` | Entry point — dispatches to `daemon_run()` or `cli_dispatch()` |
+| `src/main.cpp` | Entry point — dispatches to `daemon_run()` or `cli_dispatch()`. Only the daemon path loads config; CLI commands use the well-known socket path directly. |
 | `src/daemon.h/cpp` | Daemon mode: epoll event loop, wires all components together, handles IPC commands and signal handling |
-| `src/cli.h/cpp` | CLI mode: parses subcommands, sends JSON requests to daemon via IPC |
-| `src/config.h/cpp` | JSON config load/save from `$XDG_CONFIG_HOME/rpiradio/config.json` |
+| `src/cli.h/cpp` | CLI mode: parses subcommands, sends JSON requests to daemon via IPC. Does not load config — uses the default IPC socket path. |
+| `src/config.h/cpp` | JSON config load from `/etc/rpiradio/config.json`. Used only by the daemon. |
 | `src/mpv_controller.h/cpp` | Forks mpv child process, communicates via mpv's JSON IPC socket |
 | `src/station_manager.h/cpp` | Loads M3U playlists, tracks current station, provides next/prev/select |
 | `src/ipc_server.h/cpp` | Unix domain socket server — accepts one-shot JSON request/response connections |
@@ -59,9 +59,11 @@ make
 
 ## Configuration
 
-Config file location: `$XDG_CONFIG_HOME/rpiradio/config.json` (defaults to `~/.config/rpiradio/config.json`).
+Config file location: `/etc/rpiradio/config.json`. Installed by `make install` from `config/default_config.json`.
 
-Default values in `config/default_config.json`. Created automatically on first run if missing.
+The daemon reads this file at startup and on reload (SIGHUP or `rpiradio reload`). If the file is missing or unparseable, compiled-in defaults are used. The daemon never writes to the config file — it is admin-managed.
+
+CLI commands (`rpiradio play`, `rpiradio status`, etc.) do **not** read the config file. They communicate with the daemon over the well-known IPC socket path (`/tmp/rpiradio.sock`).
 
 | Key | Type | Default | Purpose |
 |---|---|---|---|
@@ -97,5 +99,5 @@ Default values in `config/default_config.json`. Created automatically on first r
 | Path | Purpose |
 |---|---|
 | `Makefile` | Build system — `make` to build, `make clean` to remove artifacts |
-| `config/default_config.json` | Reference default configuration |
+| `config/default_config.json` | Reference default configuration, installed to `/etc/rpiradio/config.json` |
 | `systemd/rpiradio.service` | systemd unit file — runs as user `rpiradio`, groups `input` + `audio` |

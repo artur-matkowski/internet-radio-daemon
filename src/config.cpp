@@ -1,31 +1,10 @@
 #include "config.h"
 #include "log.h"
 #include <fstream>
-#include <cstdlib>
-#include <sys/stat.h>
 
 using json = nlohmann::json;
 
-static std::string ensure_parent_dir(const std::string& path) {
-    auto pos = path.rfind('/');
-    if (pos != std::string::npos) {
-        std::string dir = path.substr(0, pos);
-        mkdir(dir.c_str(), 0755);
-    }
-    return path;
-}
-
-std::string config_path() {
-    const char* xdg = std::getenv("XDG_CONFIG_HOME");
-    std::string base;
-    if (xdg && xdg[0]) {
-        base = xdg;
-    } else {
-        const char* home = std::getenv("HOME");
-        base = std::string(home ? home : "/tmp") + "/.config";
-    }
-    return base + "/rpiradio/config.json";
-}
+static constexpr const char* CONFIG_PATH = "/etc/rpiradio/config.json";
 
 nlohmann::json config_to_json(const Config& cfg) {
     json j;
@@ -54,33 +33,19 @@ Config config_from_json(const nlohmann::json& j) {
 }
 
 Config config_load() {
-    std::string path = config_path();
-    std::ifstream f(path);
+    std::ifstream f(CONFIG_PATH);
     if (f.good()) {
         try {
             json j = json::parse(f);
             Config cfg = config_from_json(j);
-            LOG_INFO("loaded config from %s", path.c_str());
+            LOG_INFO("loaded config from %s", CONFIG_PATH);
             return cfg;
         } catch (const json::exception& e) {
-            LOG_ERROR("failed to parse config %s: %s", path.c_str(), e.what());
+            LOG_ERROR("failed to parse config %s: %s", CONFIG_PATH, e.what());
         }
+    } else {
+        LOG_INFO("no config at %s, using defaults", CONFIG_PATH);
     }
 
-    LOG_INFO("config not found at %s, creating default", path.c_str());
-    Config cfg;
-    config_save(cfg);
-    return cfg;
-}
-
-void config_save(const Config& cfg) {
-    std::string path = config_path();
-    ensure_parent_dir(path);
-    std::ofstream f(path);
-    if (!f) {
-        LOG_ERROR("cannot write config to %s", path.c_str());
-        return;
-    }
-    f << config_to_json(cfg).dump(2) << "\n";
-    LOG_INFO("saved config to %s", path.c_str());
+    return Config{};
 }

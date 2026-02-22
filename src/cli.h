@@ -1,5 +1,5 @@
 #pragma once
 
-#include "config.h"
+#include <string>
 
-int cli_dispatch(const Config& cfg, int argc, char* argv[]);
+int cli_dispatch(const std::string& socket_path, int argc, char* argv[]);
