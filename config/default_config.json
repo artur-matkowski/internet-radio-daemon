@@ -4,7 +4,9 @@
   "mqtt_port": 1883,
   "topic_prefix": "rpiradio",
   "log_level": "INFO",
-  "mpv_extra_args": [],
+  "mpv_extra_args": [
+    "--ao=alsa"
+  ],
   "ipc_socket_path": "/run/rpiradio/rpiradio.sock",
   "mpv_socket_path": "/run/rpiradio/mpv.sock"
 }
