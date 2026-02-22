@@ -3,8 +3,6 @@
 #include "station_manager.h"
 #include "mpv_controller.h"
 #include "mqtt_publisher.h"
-#include "input_handler.h"
-#include "keybind_manager.h"
 #include "ipc_server.h"
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
@@ -48,7 +46,7 @@ static void do_play_station(MpvController& mpv, StationManager& sm,
 
 static json handle_ipc(const json& req, Config& cfg,
                         StationManager& sm, MpvController& mpv,
-                        MqttPublisher& mqtt, KeybindManager& kb) {
+                        MqttPublisher& mqtt) {
     std::string cmd = req.value("command", "");
     json args = req.value("args", json::object());
 
@@ -126,77 +124,15 @@ static json handle_ipc(const json& req, Config& cfg,
         return {{"status", "ok"}, {"data", state}};
     }
 
-    if (cmd == "bind_list") {
-        json data(kb.list());
-        return {{"status", "ok"}, {"data", data}};
-    }
-
-    if (cmd == "bind_set") {
-        std::string key = args.value("key", "");
-        std::string action = args.value("action", "");
-        if (key.empty() || action.empty())
-            return {{"status", "error"}, {"message", "key and action required"}};
-        kb.set_binding(key, action);
-        cfg.bindings = kb.list();
-        config_save(cfg);
-        return {{"status", "ok"}};
-    }
-
-    if (cmd == "bind_remove") {
-        std::string key = args.value("key", "");
-        if (key.empty())
-            return {{"status", "error"}, {"message", "key required"}};
-        kb.remove_binding(key);
-        cfg.bindings = kb.list();
-        config_save(cfg);
-        return {{"status", "ok"}};
-    }
-
     if (cmd == "reload") {
         cfg = config_load();
         log_init(cfg.log_level);
         sm.load(cfg.m3u_path);
-        kb.load(cfg.bindings);
         LOG_INFO("config reloaded");
         return {{"status", "ok"}};
     }
 
     return {{"status", "error"}, {"message", "unknown command: " + cmd}};
-}
-
-static void execute_action(const std::string& action, Config& cfg,
-                            StationManager& sm, MpvController& mpv,
-                            MqttPublisher& mqtt, KeybindManager& kb) {
-    if (action == "play_pause") {
-        if (!mpv.is_playing()) {
-            do_play_station(mpv, sm, mqtt);
-        } else {
-            mpv.toggle_pause();
-            publish_full_state(mqtt, mpv, sm);
-        }
-    } else if (action == "stop") {
-        mpv.stop();
-        publish_full_state(mqtt, mpv, sm);
-    } else if (action == "next") {
-        sm.next();
-        do_play_station(mpv, sm, mqtt);
-    } else if (action == "prev") {
-        sm.prev();
-        do_play_station(mpv, sm, mqtt);
-    } else if (action == "volume_up") {
-        int v = mpv.get_volume();
-        mpv.set_volume(v + 5);
-        mqtt.publish_volume(v + 5);
-    } else if (action == "volume_down") {
-        int v = mpv.get_volume();
-        mpv.set_volume(v - 5);
-        mqtt.publish_volume(v - 5);
-    } else {
-        LOG_WARN("unknown action: %s", action.c_str());
-    }
-
-    (void)cfg;
-    (void)kb;
 }
 
 int daemon_run(Config& cfg) {
@@ -219,26 +155,6 @@ int daemon_run(Config& cfg) {
         LOG_WARN("MQTT connection failed — continuing without MQTT");
     }
 
-    KeybindManager kb;
-    kb.load(cfg.bindings);
-
-    InputHandler input;
-    bool have_input = false;
-    if (!cfg.evdev_name.empty()) {
-        std::string dev_path = InputHandler::resolve_by_name(cfg.evdev_name);
-        if (dev_path.empty()) {
-            LOG_WARN("evdev device '%s' not found — continuing without input",
-                     cfg.evdev_name.c_str());
-        } else {
-            LOG_INFO("resolved evdev '%s' → %s", cfg.evdev_name.c_str(), dev_path.c_str());
-            have_input = input.open(dev_path, true);
-            if (!have_input) {
-                LOG_WARN("evdev device %s could not be opened — continuing without input",
-                         dev_path.c_str());
-            }
-        }
-    }
-
     IpcServer ipc;
     if (!ipc.start(cfg.ipc_socket_path)) {
         LOG_ERROR("failed to start IPC server");
@@ -247,11 +163,7 @@ int daemon_run(Config& cfg) {
     }
 
     ipc.set_handler([&](const json& req) -> json {
-        return handle_ipc(req, cfg, sm, mpv, mqtt, kb);
-    });
-
-    input.set_callback([&](const std::string& action) {
-        execute_action(action, cfg, sm, mpv, mqtt, kb);
+        return handle_ipc(req, cfg, sm, mpv, mqtt);
     });
 
     mpv.on_metadata([&](const std::string& title) {
@@ -299,7 +211,6 @@ int daemon_run(Config& cfg) {
 
     add_fd(sig_fd);
     add_fd(ipc.fd());
-    if (have_input) add_fd(input.fd());
     if (mpv.fd() >= 0) add_fd(mpv.fd());
 
     LOG_INFO("daemon ready, entering main loop");
@@ -324,7 +235,6 @@ int daemon_run(Config& cfg) {
                         cfg = config_load();
                         log_init(cfg.log_level);
                         sm.load(cfg.m3u_path);
-                        kb.load(cfg.bindings);
                     } else {
                         LOG_INFO("signal %d — shutting down", si.ssi_signo);
                         g_running = false;
@@ -332,10 +242,6 @@ int daemon_run(Config& cfg) {
                 }
             } else if (fd == ipc.fd()) {
                 ipc.handle_connection();
-            } else if (have_input && fd == input.fd()) {
-                input.process_event([&](int keycode) {
-                    return kb.lookup(keycode);
-                });
             } else if (fd == mpv.fd()) {
                 mpv.process_events();
             }
@@ -345,7 +251,6 @@ int daemon_run(Config& cfg) {
     LOG_INFO("shutting down");
     close(epfd);
     close(sig_fd);
-    input.close_device();
     ipc.stop();
     mpv.shutdown();
     mqtt.disconnect();

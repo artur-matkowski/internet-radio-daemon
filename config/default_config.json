@@ -3,15 +3,6 @@
   "mqtt_host": "localhost",
   "mqtt_port": 1883,
   "topic_prefix": "rpiradio",
-  "evdev_name": "",
-  "bindings": {
-    "KEY_PLAY": "play_pause",
-    "KEY_STOP": "stop",
-    "KEY_NEXTSONG": "next",
-    "KEY_PREVIOUSSONG": "prev",
-    "KEY_VOLUMEUP": "volume_up",
-    "KEY_VOLUMEDOWN": "volume_down"
-  },
   "log_level": "INFO",
   "mpv_extra_args": [],
   "ipc_socket_path": "/tmp/rpiradio.sock",

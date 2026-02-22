@@ -1,6 +1,6 @@
 CXX      := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -O2 $(shell pkg-config --cflags libevdev)
-LDFLAGS  := $(shell pkg-config --libs libevdev) -lmosquitto
+CXXFLAGS := -std=c++17 -Wall -Wextra -Werror -O2
+LDFLAGS  := -lmosquitto
 
 SRCDIR   := src
 BUILDDIR := build
