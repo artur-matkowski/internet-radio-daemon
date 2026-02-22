@@ -10,7 +10,12 @@ SRCS := $(wildcard $(SRCDIR)/*.cpp)
 OBJS := $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
 
-.PHONY: all clean
+PREFIX   := /usr/local
+BINDIR   := $(PREFIX)/bin
+CONFDIR  := /etc/rpiradio
+UNITDIR  := /etc/systemd/system
+
+.PHONY: all clean install-deps install uninstall
 
 all: $(TARGET)
 
@@ -25,5 +30,23 @@ $(BUILDDIR):
 
 clean:
 	rm -rf $(BUILDDIR)
+
+install-deps:
+	apt-get update
+	apt-get install -y g++ pkg-config mpv libmosquitto-dev libevdev-dev nlohmann-json3-dev
+
+install: $(TARGET)
+	install -D -m 755 $(TARGET) $(DESTDIR)$(BINDIR)/rpiradio
+	install -D -m 644 config/default_config.json $(DESTDIR)$(CONFDIR)/config.json
+	install -D -m 644 systemd/rpiradio.service $(DESTDIR)$(UNITDIR)/rpiradio.service
+	id -u rpiradio &>/dev/null || useradd -r -s /usr/sbin/nologin rpiradio
+	systemctl daemon-reload
+	systemctl enable rpiradio.service
+
+uninstall:
+	systemctl disable --now rpiradio.service || true
+	rm -f $(DESTDIR)$(BINDIR)/rpiradio
+	rm -f $(DESTDIR)$(UNITDIR)/rpiradio.service
+	systemctl daemon-reload
 
 -include $(DEPS)
