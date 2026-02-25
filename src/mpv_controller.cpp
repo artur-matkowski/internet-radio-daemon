@@ -322,8 +322,15 @@ void MpvController::process_events() {
                     paused_ = p;
                     pause_cb_(p);
                 }
+            } else if (event == "start-file") {
+                playing_ = true;
+                paused_ = false;
             } else if (event == "end-file") {
-                playing_ = false;
+                std::string reason = j.value("reason", "");
+                if (reason != "stop" && reason != "redirect") {
+                    playing_ = false;
+                    paused_ = false;
+                }
             }
         } catch (...) {}
     }
